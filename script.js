@@ -1,5 +1,13 @@
 // Bitget GM/USDT 오더북 REST API 데이터 처리
 document.addEventListener('DOMContentLoaded', function() {
+    // URL 파라미터에서 ticker 가져오기
+    const urlParams = new URLSearchParams(window.location.search);
+    const ticker = urlParams.get('ticker') || 'GMUSDT';
+
+    // 페이지 제목 업데이트
+    document.title = `Bitget ${ticker} 오더북`;
+    document.querySelector('h1').textContent = `Bitget ${ticker} 오더북`;
+
     // DOM 요소 참조
     const connectionStatus = document.getElementById('connection-status');
     const lastPrice = document.getElementById('last-price');
@@ -14,10 +22,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const midPriceRange = document.getElementById('mid-price-range');
     const midPriceBidSum = document.getElementById('mid-price-bid-sum');
     const midPriceAskSum = document.getElementById('mid-price-ask-sum');
+    const bestBidRange = document.getElementById('best-bid-range');
+    const bestBidBidSum = document.getElementById('best-bid-bid-sum');
+    const bestBidAskSum = document.getElementById('best-bid-ask-sum');
+    const bestAskRange = document.getElementById('best-ask-range');
+    const bestAskBidSum = document.getElementById('best-ask-bid-sum');
+    const bestAskAskSum = document.getElementById('best-ask-ask-sum');
 
     // 상태 변수
     let currentLastPrice = 0;
     let currentMidPrice = 0;
+    let currentBestBid = 0;
+    let currentBestAsk = 0;
     let bids = [];
     let asks = [];
     let updateInterval = null;
@@ -30,14 +46,14 @@ document.addEventListener('DOMContentLoaded', function() {
             connectionStatus.textContent = '데이터 가져오는 중...';
 
             // Tickers 데이터 가져오기
-            const tickersResponse = await fetch('https://api.bitget.com/api/v2/spot/market/tickers?symbol=GMUSDT');
+            const tickersResponse = await fetch(`https://api.bitget.com/api/v2/spot/market/tickers?symbol=${ticker}`);
             if (!tickersResponse.ok) {
                 throw new Error(`HTTP error! status: ${tickersResponse.status}`);
             }
             const tickersData = await tickersResponse.json();
             
             // Orderbook 데이터 가져오기
-            const orderbookResponse = await fetch('https://api.bitget.com/api/v2/spot/market/merge-depth?symbol=GMUSDT&precision=scale1&limit=max');
+            const orderbookResponse = await fetch(`https://api.bitget.com/api/v2/spot/market/merge-depth?symbol=${ticker}&precision=scale1&limit=max`);
             if (!orderbookResponse.ok) {
                 throw new Error(`HTTP error! status: ${orderbookResponse.status}`);
             }
@@ -45,11 +61,14 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (tickersData.code === '00000' && orderbookData.code === '00000') {
                 connectionStatus.className = 'connection-status connected';
-                connectionStatus.textContent = '연결됨';
+                const timestamp = parseFloat(orderbookData.data.ts);
+                const date = new Date(timestamp);
+                const formattedDate = date.toISOString().replace('T', ' ').replace('Z', '');
+                connectionStatus.textContent = `업데이트됨 : ${formattedDate}`;
                 
                 // Tickers 데이터 처리
-                const ticker = tickersData.data[0];
-                currentLastPrice = parseFloat(ticker.lastPr);
+                const tickerData = tickersData.data[0];
+                currentLastPrice = parseFloat(tickerData.lastPr);
                 lastPrice.textContent = currentLastPrice.toFixed(6);
                 
                 // Orderbook 데이터 처리
@@ -95,6 +114,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Spread 퍼센트 계산 및 업데이트
             const spreadPercentValue = (spreadValue / currentMidPrice) * 100;
             spreadPercent.textContent = spreadPercentValue.toFixed(2) + '%';
+
+            currentBestBid = highestBid;
+            currentBestAsk = lowestAsk;
         }
         
         // 오더북 UI 업데이트
@@ -192,6 +214,40 @@ document.addEventListener('DOMContentLoaded', function() {
             .filter(ask => ask.price <= midPriceUpper && ask.price >= currentMidPrice)
             .reduce((sum, ask) => sum + (ask.price * ask.amount), 0);
         midPriceAskSum.textContent = midPriceAskSumValue.toFixed(2) + ' USDT';
+        
+        // bb Price 대비 ±2% 범위 계산
+        const bbPriceLower = currentBestBid * 0.98;
+        const bbPriceUpper = currentBestBid * 1.02;
+        bestBidRange.textContent = `${bbPriceLower.toFixed(6)} ~ ${bbPriceUpper.toFixed(6)}`;
+
+        // bb Price 대비 ±2% 내 매수 호가 합계 계산
+        const bbPriceBidSumValue = bids
+            .filter(bid => bid.price >= bbPriceLower && bid.price <= currentBestBid)
+            .reduce((sum, bid) => sum + (bid.price * bid.amount), 0);
+        bestBidBidSum.textContent = bbPriceBidSumValue.toFixed(2) + ' USDT';
+
+        // bb Price 대비 ±2% 내 매도 호가 합계 계산
+        const bbPriceAskSumValue = asks
+            .filter(ask => ask.price <= bbPriceUpper && ask.price >= currentBestBid)
+            .reduce((sum, ask) => sum + (ask.price * ask.amount), 0);
+        bestBidAskSum.textContent = bbPriceAskSumValue.toFixed(2) + ' USDT';
+
+        // ba Price 대비 ±2% 범위 계산
+        const baPriceLower = currentBestAsk * 0.98;
+        const baPriceUpper = currentBestAsk * 1.02;
+        bestAskRange.textContent = `${baPriceLower.toFixed(6)} ~ ${baPriceUpper.toFixed(6)}`;
+
+        // ba Price 대비 ±2% 내 매수 호가 합계 계산
+        const baPriceBidSumValue = bids
+            .filter(bid => bid.price >= baPriceLower && bid.price <= currentBestAsk)
+            .reduce((sum, bid) => sum + (bid.price * bid.amount), 0);
+        bestAskBidSum.textContent = baPriceBidSumValue.toFixed(2) + ' USDT';
+
+        // ba Price 대비 ±2% 내 매도 호가 합계 계산
+        const baPriceAskSumValue = asks
+            .filter(ask => ask.price <= baPriceUpper && ask.price >= currentBestAsk)
+            .reduce((sum, ask) => sum + (ask.price * ask.amount), 0);
+        bestAskAskSum.textContent = baPriceAskSumValue.toFixed(2) + ' USDT';
     }
 
     // 초기 데이터 로드 및 주기적 업데이트 시작

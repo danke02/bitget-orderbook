@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitget GM/USDT 오더북</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        h1 {
+            margin: 0;
+            color: #2c3e50;
+        }
+        .status {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .status-item {
+            text-align: center;
+        }
+        .status-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .status-value {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .orderbook-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .orderbook {
+            width: 48%;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .orderbook-header {
+            background-color: #f8f9fa;
+            padding: 10px;
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+        .orderbook-body {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .orderbook-row {
+            display: flex;
+            padding: 5px 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .orderbook-row:last-child {
+            border-bottom: none;
+        }
+        .orderbook-price, .orderbook-amount, .orderbook-total {
+            flex: 1;
+            text-align: right;
+        }
+        .bid .orderbook-price {
+            color: #28a745;
+        }
+        .ask .orderbook-price {
+            color: #dc3545;
+        }
+        .depth-metrics {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .depth-metrics h2 {
+            margin-top: 0;
+            font-size: 1.2em;
+            color: #2c3e50;
+        }
+        .metrics-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .metric-card {
+            flex: 1;
+            min-width: 200px;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .metric-title {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .metric-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .connection-status {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .connecting {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Bitget GM/USDT 오더북</h1>
+        </header>
+        
+        <div class="connection-status connecting" id="connection-status">
+            연결 중...
+        </div>
+        
+        <div class="status">
+            <div class="status-item">
+                <div class="status-label">Last Price</div>
+                <div class="status-value" id="last-price">-</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Mid Price</div>
+                <div class="status-value" id="mid-price">-</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Spread</div>
+                <div class="status-value" id="spread">-</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Spread %</div>
+                <div class="status-value" id="spread-percent">-</div>
+            </div>
+        </div>
+        
+        <div class="orderbook-container">
+            <div class="orderbook">
+                <div class="orderbook-header">매수 (Bids)</div>
+                <div class="orderbook-body" id="bids-container">
+                    <!-- 매수 주문 데이터가 여기에 동적으로 추가됩니다 -->
+                </div>
+            </div>
+            <div class="orderbook">
+                <div class="orderbook-header">매도 (Asks)</div>
+                <div class="orderbook-body" id="asks-container">
+                    <!-- 매도 주문 데이터가 여기에 동적으로 추가됩니다 -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="depth-metrics">
+            <h2>Depth 분석</h2>
+            <div class="metrics-container">
+                <div class="metric-card">
+                    <div class="metric-title">Last Price 대비 -2% ~ +2% 범위</div>
+                    <div class="metric-value" id="last-price-range">-</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Last Price 대비 -2% ~ +2% 내 매수 호가 합계</div>
+                    <div class="metric-value" id="last-price-bid-sum">-</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Last Price 대비 -2% ~ +2% 내 매도 호가 합계</div>
+                    <div class="metric-value" id="last-price-ask-sum">-</div>
+                </div>
+            </div>
+            <div class="metrics-container" style="margin-top: 20px;">
+                <div class="metric-card">
+                    <div class="metric-title">Mid Price 대비 -2% ~ +2% 범위</div>
+                    <div class="metric-value" id="mid-price-range">-</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Mid Price 대비 -2% ~ +2% 내 매수 호가 합계</div>
+                    <div class="metric-value" id="mid-price-bid-sum">-</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Mid Price 대비 -2% ~ +2% 내 매도 호가 합계</div>
+                    <div class="metric-value" id="mid-price-ask-sum">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
